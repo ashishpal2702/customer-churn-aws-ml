@@ -6,7 +6,29 @@ A comprehensive machine learning project that demonstrates how to train and depl
 
 - [Overview](#overview)
 - [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
+- [Prerequisites](#p#### 2. Role#### 3. S3 A#### 4. Endp#### 5. Training Job Failures
+```
+Algorithm error: Training job failed
+```
+**Solution**: Check training script, data format, hyperparameters, and S3 permissionsDeployment Timeout
+```
+Failed to deploy model
+```
+**Solution**: Check CloudWatch logs, verify inference script, ensure IAM permissions
+
+#### 5. Training Job Failuresrrors
+```
+NoSuchBucket: The specified bucket does not exist
+```
+**Solution**: Verify bucket name and region, update S3 ARNs in IAM policy
+
+#### 4. Endpoint Deployment Timeoutsion Errors
+```
+UnauthorizedOperation: You are not authorized to perform this operation
+```
+**Solution**: Ensure your SageMaker role has proper permissions (see IAM Policy Setup above)
+
+#### 3. S3 Access Errorssites)
 - [Setup Instructions](#setup-instructions)
 - [Usage](#usage)
 - [File Descriptions](#file-descriptions)
@@ -28,14 +50,22 @@ This project implements an end-to-end machine learning pipeline for predicting c
 ## 📁 Project Structure
 
 ```
-aws-ml/
+customer-churn-aws-ml/
 ├── README.md                              # This file
 ├── requirements.txt                       # Python dependencies
-├── sagemaker_training_deployment.ipynb    # Main notebook
-├── ml_experiment.ipynb                    # Experimental notebook
-├── training.py                            # Training script for SageMaker
-├── inference.py                           # Inference script for deployment
-└── .gitignore                            # Git ignore file
+├── sagemaker-iam-policy.json             # IAM policy for SageMaker permissions
+├── ml_experiment_mlflow.ipynb             # MLflow experiment notebook
+├── ml_experiment.ipynb                    # Local ML experiment notebook
+├── data/
+│   ├── customer_churn.csv                 # Original dataset
+│   └── customer_churn_processed.csv       # Processed dataset
+├── model/                                 # Model artifacts (gitignored)
+│   ├── best_model_xgboost.joblib
+│   └── preprocessor.joblib
+└── sagemaker/
+    ├── sagemaker_training_deployment.ipynb # Main SageMaker notebook
+    ├── training.py                        # Training script for SageMaker
+    └── inference.py                       # Inference script for deployment
 ```
 
 ## 🔧 Prerequisites
@@ -46,10 +76,30 @@ aws-ml/
 - S3 bucket for storing data and model artifacts
 
 ### Required IAM Permissions
-Your SageMaker execution role needs:
+
+Your SageMaker execution role needs the following permissions:
+
+#### Option 1: AWS Managed Policies (Recommended for Development)
 - `AmazonSageMakerFullAccess`
 - `AmazonS3FullAccess` (or specific bucket permissions)
 - `IAMReadOnlyAccess`
+
+#### Option 2: Custom IAM Policy (Recommended for Production)
+Use the provided `sagemaker-iam-policy.json` file for fine-grained permissions:
+
+```bash
+# Create IAM policy using AWS CLI
+aws iam create-policy \
+    --policy-name SageMakerCustomerChurnPolicy \
+    --policy-document file://sagemaker-iam-policy.json
+
+# Attach policy to your SageMaker execution role
+aws iam attach-role-policy \
+    --role-name YourSageMakerExecutionRole \
+    --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/SageMakerCustomerChurnPolicy
+```
+
+**Note**: Update the S3 bucket ARNs and MLflow tracking server ARN in the policy file to match your resources.
 
 ### Local Environment
 - Python 3.7 or higher
@@ -128,21 +178,28 @@ predictor = model.deploy(
 
 ### Core Files
 
-#### `sagemaker_training_deployment.ipynb`
+#### `sagemaker-iam-policy.json`
+Custom IAM policy document that provides:
+- S3 bucket access for data and model storage
+- SageMaker permissions for training and deployment
+- MLflow tracking server access for experiment management
+- Minimal permissions following security best practices
+
+#### `sagemaker/sagemaker_training_deployment.ipynb`
 The main Jupyter notebook containing:
 - Complete end-to-end ML pipeline
 - Step-by-step instructions
 - Explanatory markdown cells
 - Error handling examples
 
-#### `training.py`
+#### `sagemaker/training.py`
 SageMaker training script that:
 - Loads data from S3
 - Trains Random Forest model
 - Saves model artifacts
 - Supports hyperparameter tuning
 
-#### `inference.py`
+#### `sagemaker/inference.py`
 SageMaker inference script that:
 - Loads trained model
 - Processes input data (JSON/CSV)
@@ -240,7 +297,26 @@ result = predictor.predict(
 
 ### Common Issues
 
-#### 1. Role Permission Errors
+#### 1. IAM Policy Setup
+**Issue**: Setting up custom IAM permissions
+```bash
+# Step 1: Update the policy file with your specific resources
+# Edit sagemaker-iam-policy.json:
+# - Replace "SageMaker" with your actual S3 bucket name
+# - Update the MLflow tracking server ARN with your account ID and region
+
+# Step 2: Create the policy
+aws iam create-policy \
+    --policy-name SageMakerCustomerChurnPolicy \
+    --policy-document file://sagemaker-iam-policy.json
+
+# Step 3: Attach to your SageMaker execution role
+aws iam attach-role-policy \
+    --role-name YourSageMakerExecutionRoleName \
+    --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/SageMakerCustomerChurnPolicy
+```
+
+#### 2. Role Permission Errors
 ```
 UnauthorizedOperation: You are not authorized to perform this operation
 ```
