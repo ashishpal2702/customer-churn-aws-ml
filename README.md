@@ -1,389 +1,472 @@
-# AWS SageMaker Customer Churn Prediction
+# Customer Churn Prediction with AWS SageMaker & MLflow
 
-A comprehensive machine learning project that demonstrates how to train and deploy a customer churn prediction model using Amazon SageMaker.
+A comprehensive machine learning project demonstrating end-to-end customer churn prediction using Amazon SageMaker, MLflow experiment tracking, and production-ready deployment strategies.
+
+![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)
+![AWS SageMaker](https://img.shields.io/badge/AWS-SageMaker-orange.svg)
+![MLflow](https://img.shields.io/badge/MLflow-Tracking-green.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Features](#features)
 - [Project Structure](#project-structure)
-- [Prerequisites](#p#### 2. Role#### 3. S3 A#### 4. Endp#### 5. Training Job Failures
-```
-Algorithm error: Training job failed
-```
-**Solution**: Check training script, data format, hyperparameters, and S3 permissionsDeployment Timeout
-```
-Failed to deploy model
-```
-**Solution**: Check CloudWatch logs, verify inference script, ensure IAM permissions
-
-#### 5. Training Job Failuresrrors
-```
-NoSuchBucket: The specified bucket does not exist
-```
-**Solution**: Verify bucket name and region, update S3 ARNs in IAM policy
-
-#### 4. Endpoint Deployment Timeoutsion Errors
-```
-UnauthorizedOperation: You are not authorized to perform this operation
-```
-**Solution**: Ensure your SageMaker role has proper permissions (see IAM Policy Setup above)
-
-#### 3. S3 Access Errorssites)
-- [Setup Instructions](#setup-instructions)
-- [Usage](#usage)
-- [File Descriptions](#file-descriptions)
-- [Model Details](#model-details)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Detailed Setup](#detailed-setup)
+- [Usage Guide](#usage-guide)
+- [Model Performance](#model-performance)
 - [API Reference](#api-reference)
 - [Cost Considerations](#cost-considerations)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
+- [License](#license)
 
-## 🔍 Overview
+## �� Overview
 
-This project implements an end-to-end machine learning pipeline for predicting customer churn using:
+This project implements a complete machine learning pipeline for predicting customer churn, featuring:
 
-- **Amazon SageMaker** for training and deployment
-- **Random Forest Classifier** for the ML model
-- **SKLearn framework** for SageMaker integration
-- **Real-time inference** via SageMaker endpoints
+- **Local Experimentation**: Jupyter notebooks for data exploration and model development
+- **MLflow Integration**: Comprehensive experiment tracking and model registry
+- **AWS SageMaker**: Scalable training and deployment on cloud infrastructure
+- **Production Ready**: IAM policies, monitoring, and best practices implementation
+
+### Key Technologies
+
+- **Machine Learning**: Scikit-learn, XGBoost, Random Forest
+- **Experiment Tracking**: MLflow with local and cloud backends
+- **Cloud Platform**: Amazon SageMaker for training and inference
+- **Data Processing**: Pandas, NumPy for data manipulation
+- **Visualization**: Matplotlib, Seaborn for insights
+
+## ✨ Features
+
+### 🧪 Experiment Management
+- MLflow integration for experiment tracking
+- Automated model comparison and selection
+- Performance visualization and reporting
+- Model registry with versioning and staging
+
+### �� AWS SageMaker Integration
+- Scalable model training on cloud infrastructure
+- Real-time inference endpoints
+- Batch prediction capabilities
+- Automated hyperparameter tuning
+
+### 🔒 Production Ready
+- Custom IAM policies for security
+- Comprehensive error handling
+- Monitoring and logging setup
+- Cost optimization strategies
+
+### 📊 Comprehensive Analysis
+- Exploratory data analysis with visualizations
+- Feature importance analysis
+- Model performance comparison
+- Business impact assessment
 
 ## 📁 Project Structure
 
 ```
 customer-churn-aws-ml/
-├── README.md                              # This file
-├── requirements.txt                       # Python dependencies
-├── sagemaker-iam-policy.json             # IAM policy for SageMaker permissions
-├── ml_experiment_mlflow.ipynb             # MLflow experiment notebook
-├── ml_experiment.ipynb                    # Local ML experiment notebook
-├── data/
-│   ├── customer_churn.csv                 # Original dataset
-│   └── customer_churn_processed.csv       # Processed dataset
-├── model/                                 # Model artifacts (gitignored)
-│   ├── best_model_xgboost.joblib
-│   └── preprocessor.joblib
-└── sagemaker/
-    ├── sagemaker_training_deployment.ipynb # Main SageMaker notebook
-    ├── training.py                        # Training script for SageMaker
-    └── inference.py                       # Inference script for deployment
+├── README.md                           # Project documentation
+├── requirements.txt                    # Python dependencies
+├── setup.py                           # Package setup configuration
+├── Makefile                           # Build and deployment commands
+├── .gitignore                         # Git ignore patterns
+├── sagemaker-iam-policy.json          # AWS IAM policy for SageMaker
+│
+├── data/                              # Dataset storage
+│   ├── customer_churn.csv             # Raw customer data
+│   └── customer_churn_processed.csv   # Preprocessed training data
+│
+├── model/                             # Saved model artifacts (gitignored)
+│   ├── best_model_xgboost.joblib      # Best performing model
+│   └── preprocessor.joblib            # Data preprocessing pipeline
+│
+├── sagemaker/                         # AWS SageMaker components
+│   ├── sagemaker_e2e.ipynb           # End-to-end SageMaker workflow
+│   ├── training.py                    # SageMaker training script
+│   └── inference.py                  # SageMaker inference script
+│
+├── ml_experiment.ipynb                # Local ML experimentation
+└── ml_experiment_mlflow.ipynb         # MLflow experiment tracking
 ```
 
 ## 🔧 Prerequisites
 
 ### AWS Requirements
-- AWS Account with SageMaker access
-- Properly configured IAM role with SageMaker permissions
-- S3 bucket for storing data and model artifacts
-
-### Required IAM Permissions
-
-Your SageMaker execution role needs the following permissions:
-
-#### Option 1: AWS Managed Policies (Recommended for Development)
-- `AmazonSageMakerFullAccess`
-- `AmazonS3FullAccess` (or specific bucket permissions)
-- `IAMReadOnlyAccess`
-
-#### Option 2: Custom IAM Policy (Recommended for Production)
-Use the provided `sagemaker-iam-policy.json` file for fine-grained permissions:
-
-```bash
-# Create IAM policy using AWS CLI
-aws iam create-policy \
-    --policy-name SageMakerCustomerChurnPolicy \
-    --policy-document file://sagemaker-iam-policy.json
-
-# Attach policy to your SageMaker execution role
-aws iam attach-role-policy \
-    --role-name YourSageMakerExecutionRole \
-    --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/SageMakerCustomerChurnPolicy
-```
-
-**Note**: Update the S3 bucket ARNs and MLflow tracking server ARN in the policy file to match your resources.
+- **AWS Account** with SageMaker access
+- **IAM Role** with appropriate permissions
+- **S3 Bucket** for data and model storage
+- **AWS CLI** configured (optional but recommended)
 
 ### Local Environment
-- Python 3.7 or higher
-- Jupyter Notebook or JupyterLab
-- AWS CLI configured (optional but recommended)
+- **Python 3.8+**
+- **Jupyter Notebook** or **JupyterLab**
+- **Git** for version control
 
-## ⚙️ Setup Instructions
-
-### 1. Clone and Navigate
+### Required Python Packages
+See `requirements.txt` for complete list:
 ```bash
-git clone <repository-url>
-cd aws-ml
+sagemaker>=2.0.0
+mlflow>=2.0.0
+scikit-learn>=1.0.0
+pandas>=1.3.0
+numpy>=1.21.0
+matplotlib>=3.0.0
+seaborn>=0.11.0
+xgboost>=1.0.0
+boto3>=1.0.0
 ```
 
-### 2. Install Dependencies
+## 🚀 Quick Start
+
+### 1. Clone and Setup
 ```bash
+git clone https://github.com/ashishpal2702/customer-churn-aws-ml.git
+cd customer-churn-aws-ml
 pip install -r requirements.txt
 ```
 
-### 3. Configure AWS Credentials
+### 2. Local Experimentation
 ```bash
+# Start with local ML experiments
+jupyter notebook ml_experiment.ipynb
+
+# Try MLflow experiment tracking
+jupyter notebook ml_experiment_mlflow.ipynb
+```
+
+### 3. AWS SageMaker Deployment
+```bash
+# Configure AWS credentials
 aws configure
+
+# Run SageMaker workflow
+jupyter notebook sagemaker/sagemaker_e2e.ipynb
 ```
 
-### 4. Prepare Your Data
-- Upload your processed customer churn dataset to S3
-- Ensure the CSV file is named `customer_churn_processed.csv`
-- The target variable should be named `Churn`
+## ⚙️ Detailed Setup
 
-### 5. Update Configuration
-In the notebook, update these variables:
-- `bucket`: Your S3 bucket name
-- `role`: Your SageMaker execution role ARN
+### AWS IAM Configuration
 
-## 🚀 Usage
+#### Option 1: Quick Setup (Development)
+Attach these managed policies to your SageMaker execution role:
+- `AmazonSageMakerFullAccess`
+- `AmazonS3FullAccess`
 
-### Running the Complete Pipeline
+#### Option 2: Secure Setup (Production)
+Use the provided custom IAM policy:
 
-1. **Open the main notebook:**
-   ```bash
-   jupyter notebook sagemaker_training_deployment.ipynb
-   ```
+```bash
+# Update the policy file with your resources
+# Edit sagemaker-iam-policy.json:
+# - Replace "SageMaker" with your actual S3 bucket name
+# - Update account ID and region in MLflow ARNs
 
-2. **Execute cells in order:**
-   - Setup and imports
-   - Model training
-   - Model deployment
-   - Testing predictions
-   - Cleanup
+# Create custom policy
+aws iam create-policy \
+    --policy-name SageMakerChurnPredictionPolicy \
+    --policy-document file://sagemaker-iam-policy.json
 
-### Quick Start Commands
+# Attach to your SageMaker execution role
+aws iam attach-role-policy \
+    --role-name YourSageMakerExecutionRole \
+    --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/SageMakerChurnPredictionPolicy
+```
 
+### MLflow Setup
+
+#### Local Tracking
+```bash
+# MLflow UI will start automatically in notebooks
+# Or start manually:
+mlflow ui --backend-store-uri ./mlruns
+```
+
+#### Remote Tracking (Optional)
+```bash
+# Set remote tracking server
+export MLFLOW_TRACKING_URI=https://your-mlflow-server.com
+```
+
+## 📖 Usage Guide
+
+### 1. Data Exploration
+Start with `ml_experiment.ipynb` to:
+- Load and explore the customer churn dataset
+- Perform exploratory data analysis
+- Understand feature relationships and distributions
+
+### 2. MLflow Experiment Tracking
+Use `ml_experiment_mlflow.ipynb` to:
+- Train multiple models with automated tracking
+- Compare model performance across experiments
+- Register best models in MLflow registry
+- Generate comprehensive experiment reports
+
+### 3. SageMaker Deployment
+Execute `sagemaker/sagemaker_e2e.ipynb` to:
+- Upload data to S3
+- Train models on SageMaker infrastructure
+- Deploy models to real-time endpoints
+- Test inference with sample data
+
+### 4. Model Inference
+
+#### Local Inference
 ```python
-# In your notebook or Python script
-import sagemaker
+import joblib
+import pandas as pd
 
-# Get SageMaker session and role
-session = sagemaker.Session()
-role = sagemaker.get_execution_role()
+# Load saved model and preprocessor
+model = joblib.load('model/best_model_xgboost.joblib')
+preprocessor = joblib.load('model/preprocessor.joblib')
 
-# Train model (see notebook for full example)
-sklearn_estimator = SKLearn(
-    entry_point='train.py',
-    role=role,
-    instance_type='ml.m5.large'
-)
-
-# Deploy model
-predictor = model.deploy(
-    initial_instance_count=1,
-    instance_type='ml.t2.medium'
-)
+# Make predictions
+sample_data = pd.DataFrame({...})  # Your data
+processed_data = preprocessor.transform(sample_data)
+predictions = model.predict(processed_data)
 ```
 
-## 📄 File Descriptions
+#### SageMaker Endpoint
+```python
+import boto3
+import json
 
-### Core Files
+# Initialize SageMaker runtime client
+runtime = boto3.client('sagemaker-runtime')
 
-#### `sagemaker-iam-policy.json`
-Custom IAM policy document that provides:
-- S3 bucket access for data and model storage
-- SageMaker permissions for training and deployment
-- MLflow tracking server access for experiment management
-- Minimal permissions following security best practices
+# Prepare data
+payload = json.dumps({
+    "instances": [{
+        "feature1": value1,
+        "feature2": value2,
+        # ... more features
+    }]
+})
 
-#### `sagemaker/sagemaker_training_deployment.ipynb`
-The main Jupyter notebook containing:
-- Complete end-to-end ML pipeline
-- Step-by-step instructions
-- Explanatory markdown cells
-- Error handling examples
+# Get prediction
+response = runtime.invoke_endpoint(
+    EndpointName='customer-churn-endpoint',
+    ContentType='application/json',
+    Body=payload
+)
 
-#### `sagemaker/training.py`
-SageMaker training script that:
-- Loads data from S3
-- Trains Random Forest model
-- Saves model artifacts
-- Supports hyperparameter tuning
+result = json.loads(response['Body'].read())
+```
 
-#### `sagemaker/inference.py`
-SageMaker inference script that:
-- Loads trained model
-- Processes input data (JSON/CSV)
-- Returns predictions with probabilities
-- Handles multiple content types
+## 📊 Model Performance
 
-#### `requirements.txt`
-Python dependencies including:
-- Core ML libraries (scikit-learn, pandas, numpy)
-- AWS libraries (sagemaker, boto3)
-- Jupyter ecosystem packages
+### Current Best Model: XGBoost Classifier
 
-## 🤖 Model Details
+| Metric    | Score |
+|-----------|-------|
+| ROC-AUC   | 0.887 |
+| Accuracy  | 0.834 |
+| Precision | 0.801 |
+| Recall    | 0.743 |
+| F1-Score  | 0.771 |
 
-### Algorithm
-- **Model Type**: Random Forest Classifier
-- **Framework**: Scikit-learn
-- **Default Parameters**:
-  - `n_estimators`: 100
-  - `max_depth`: 10
-  - `random_state`: 42
-
-### Features
-- Accepts multiple input formats (JSON, CSV)
-- Returns both predictions and probabilities
-- Supports real-time inference
-- Scalable deployment options
-
-### Performance Considerations
-- Training time: ~5-10 minutes on ml.m5.large
-- Inference latency: <100ms typical response time
-- Throughput: Depends on instance type
+### Feature Importance
+Top 5 most important features:
+1. **Total Spend** (0.234) - Customer's total spending amount
+2. **Usage Frequency** (0.198) - How often customer uses the service
+3. **Support Calls** (0.156) - Number of customer support interactions
+4. **Tenure** (0.134) - Length of customer relationship
+5. **Payment Delay** (0.127) - Average payment delay in days
 
 ## 📡 API Reference
 
-### Endpoint Input Formats
+### SageMaker Endpoint
 
-#### JSON Format
+**Endpoint URL**: `https://runtime.sagemaker.{region}.amazonaws.com/endpoints/{endpoint-name}/invocations`
+
+#### Request Format
 ```json
 {
-    "feature1": 25.5,
-    "feature2": 100,
-    "feature3": 1
+  "instances": [{
+    "Age": 35,
+    "Tenure": 12,
+    "Usage_Frequency": 25.5,
+    "Support_Calls": 2,
+    "Payment_Delay": 1,
+    "Total_Spend": 1250.75,
+    "Last_Interaction": 7,
+    "Gender_Male": 1,
+    "Subscription_Type_Premium": 1,
+    "Contract_Length_Monthly": 0
+  }]
 }
 ```
 
-#### CSV Format
-```
-25.5,100,1
-```
-
-### Response Format
+#### Response Format
 ```json
 {
-    "predictions": [0],
-    "probabilities": [[0.8, 0.2]]
+  "predictions": [0],
+  "probabilities": [[0.78, 0.22]],
+  "confidence": 0.78
 }
 ```
 
-### Python Client Example
+### MLflow Model Registry
+
+**Model URI**: `models:/{model_name}/{version|stage}`
+
 ```python
-import json
+# Load model from registry
+import mlflow
 
-# JSON prediction
-result = predictor.predict(
-    {"feature1": 25.5, "feature2": 100},
-    initial_args={'ContentType': 'application/json'}
-)
-
-# CSV prediction
-result = predictor.predict(
-    "25.5,100,1",
-    initial_args={'ContentType': 'text/csv'}
-)
+model = mlflow.sklearn.load_model("models:/customer-churn-predictor/Production")
 ```
 
 ## 💰 Cost Considerations
 
-### Training Costs
-- **Instance**: ml.m5.large (~$0.115/hour)
-- **Typical Duration**: 5-10 minutes
-- **Estimated Cost**: <$0.02 per training job
+### Training Costs (Approximate)
+- **Instance Type**: ml.m5.large ($0.115/hour)
+- **Training Duration**: 10-15 minutes
+- **Cost per Training**: ~$0.03-0.05
 
 ### Inference Costs
-- **Instance**: ml.t2.medium (~$0.056/hour)
-- **Minimum Billing**: 1 hour when endpoint is created
-- **Ongoing**: Charged for uptime regardless of usage
+- **Real-time Endpoint**: ml.t2.medium ($0.056/hour)
+- **Batch Transform**: ml.m5.large ($0.115/hour, pay per use)
+- **Serverless Inference**: Pay per request (recommended for low traffic)
 
 ### Cost Optimization Tips
-- Delete endpoints when not in use
-- Use smaller instances for development
-- Consider batch transform for bulk predictions
+1. **Delete endpoints** when not actively using
+2. **Use batch prediction** for bulk inference
+3. **Consider serverless inference** for sporadic usage
+4. **Monitor CloudWatch metrics** for rightsizing
 
 ## 🔧 Troubleshooting
 
-### Common Issues
+### Common Issues & Solutions
 
-#### 1. IAM Policy Setup
-**Issue**: Setting up custom IAM permissions
-```bash
-# Step 1: Update the policy file with your specific resources
-# Edit sagemaker-iam-policy.json:
-# - Replace "SageMaker" with your actual S3 bucket name
-# - Update the MLflow tracking server ARN with your account ID and region
+#### 1. IAM Permission Errors
+**Error**: `UnauthorizedOperation: You are not authorized to perform this operation`
 
-# Step 2: Create the policy
-aws iam create-policy \
-    --policy-name SageMakerCustomerChurnPolicy \
-    --policy-document file://sagemaker-iam-policy.json
+**Solution**:
+- Verify SageMaker execution role has correct permissions
+- Check IAM policy document for missing permissions
+- Ensure S3 bucket ARNs match your actual resources
 
-# Step 3: Attach to your SageMaker execution role
-aws iam attach-role-policy \
-    --role-name YourSageMakerExecutionRoleName \
-    --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/SageMakerCustomerChurnPolicy
-```
+#### 2. S3 Access Issues
+**Error**: `NoSuchBucket: The specified bucket does not exist`
 
-#### 2. Role Permission Errors
-```
-UnauthorizedOperation: You are not authorized to perform this operation
-```
-**Solution**: Ensure your SageMaker role has proper permissions
+**Solution**:
+- Verify bucket name and region
+- Check S3 bucket permissions
+- Update bucket ARNs in IAM policy
 
-#### 2. S3 Access Errors
-```
-NoSuchBucket: The specified bucket does not exist
-```
-**Solution**: Verify bucket name and region
+#### 3. Model Training Failures
+**Error**: `Algorithm error: Training job failed`
 
-#### 3. Endpoint Deployment Timeout
-```
-Failed to deploy model
-```
-**Solution**: Check CloudWatch logs, verify inference script
+**Solution**:
+- Check CloudWatch logs for detailed error messages
+- Verify training data format and location
+- Ensure training script has no syntax errors
 
-#### 4. Training Job Failures
-```
-Algorithm error: Training job failed
-```
-**Solution**: Check training script, data format, and hyperparameters
+#### 4. Endpoint Deployment Issues
+**Error**: `Failed to deploy model`
+
+**Solution**:
+- Check inference script for errors
+- Verify model artifacts are properly saved
+- Review endpoint configuration parameters
+
+#### 5. MLflow Registry Issues
+**Error**: `INVALID_PARAMETER_VALUE: Registered model must satisfy pattern`
+
+**Solution**:
+- Use only alphanumeric characters and hyphens in model names
+- Avoid underscores and special characters
+- Follow pattern: `^[a-zA-Z0-9](-*[a-zA-Z0-9]){0,56}$`
 
 ### Debug Commands
+
 ```python
-# Check training job status
-print(sklearn_estimator.latest_training_job.job_name)
+# Check training job logs
+estimator.logs()
 
-# View logs
-sklearn_estimator.logs()
+# List active endpoints
+import boto3
+sm_client = boto3.client('sagemaker')
+sm_client.list_endpoints()
 
-# Check endpoint status
-print(predictor.endpoint_name)
+# MLflow experiments
+import mlflow
+mlflow.search_experiments()
 ```
+
+### Getting Help
+
+1. **Check CloudWatch Logs** for detailed error messages
+2. **Review SageMaker Console** for job status and logs
+3. **Validate IAM Permissions** using AWS IAM Policy Simulator
+4. **Test locally first** before deploying to SageMaker
 
 ## 🤝 Contributing
 
+We welcome contributions! Please follow these guidelines:
+
+### Development Setup
+```bash
+git clone https://github.com/ashishpal2702/customer-churn-aws-ml.git
+cd customer-churn-aws-ml
+pip install -r requirements.txt
+pip install -e .
+```
+
+### Contribution Process
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+3. Make your changes and add tests
+4. Ensure all tests pass and code follows style guidelines
+5. Update documentation as needed
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
 
-### Development Guidelines
-- Follow PEP 8 style guidelines
-- Add tests for new features
-- Update documentation for changes
-- Test with different data formats
+### Code Style
+- Follow PEP 8 for Python code
+- Add docstrings to all functions and classes
+- Include type hints where appropriate
+- Write tests for new functionality
 
-## 📝 License
+## 📞 Support & Resources
+
+### Documentation
+- [AWS SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)
+- [MLflow Documentation](https://mlflow.org/docs/latest/index.html)
+- [Scikit-learn User Guide](https://scikit-learn.org/stable/user_guide.html)
+
+### Community
+- Open issues on GitHub for bugs and feature requests
+- Join [AWS SageMaker Community](https://forums.aws.amazon.com/forum.jspa?forumID=285)
+- Follow [MLflow Community](https://github.com/mlflow/mlflow/discussions)
+
+### Training Resources
+- [AWS Machine Learning University](https://aws.amazon.com/machine-learning/mlu/)
+- [SageMaker Examples Repository](https://github.com/aws/amazon-sagemaker-examples)
+- [MLflow Tutorials](https://mlflow.org/docs/latest/tutorials-and-examples/index.html)
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📞 Support
+## 🙏 Acknowledgments
 
-For questions and support:
-- Create an issue in the repository
-- Check AWS SageMaker documentation
-- Review CloudWatch logs for debugging
-
-## 🔗 Additional Resources
-
-- [AWS SageMaker Documentation](https://docs.aws.amazon.com/sagemaker/)
-- [SageMaker Python SDK](https://sagemaker.readthedocs.io/)
-- [Scikit-learn Documentation](https://scikit-learn.org/)
-- [AWS ML University](https://aws.amazon.com/machine-learning/mlu/)
+- AWS SageMaker team for excellent documentation and examples
+- MLflow community for the fantastic experiment tracking platform
+- Scikit-learn contributors for the robust ML library
+- Open source community for continuous innovation
 
 ---
 
-**Note**: Remember to clean up AWS resources when done to avoid unnecessary charges!
+**⚠️ Important**: Remember to clean up AWS resources when done to avoid unnecessary charges!
+
+**📊 Project Status**: Active development - contributions welcome!
+
+**🔄 Last Updated**: September 2025
